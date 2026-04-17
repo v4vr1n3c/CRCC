@@ -12,11 +12,36 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// ── Auth helpers (synchronous — safe to call before DOMContentLoaded) ─────────
-function checkAuth() {
-  return !!(sessionStorage.getItem('crcc_token') && sessionStorage.getItem('crcc_user'));
+// ── JWT-based auth helpers ────────────────────────────────────────────────────
+
+/** Return stored JWT token or null — rejects literal "undefined"/"null" strings */
+function getToken() {
+  const t = localStorage.getItem('crcc_jwt');
+  if (!t || t === 'undefined' || t === 'null') return null;
+  return t;
 }
 
+/** Decode JWT payload (base64url) without verifying signature (server verifies) */
+function decodeJwtPayload(token) {
+  try {
+    const part = token.split('.')[1];
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(padded));
+  } catch (e) {
+    return null;
+  }
+}
+
+/** Returns true when a valid, non-expired JWT is stored */
+function checkAuth() {
+  const token = getToken();
+  if (!token) return false;
+  const payload = decodeJwtPayload(token);
+  if (!payload || !payload.exp) return false;
+  return payload.exp * 1000 > Date.now();
+}
+
+/** Redirect to login if not authenticated */
 function requireAuth() {
   if (!checkAuth()) {
     const here = encodeURIComponent(location.pathname + location.search);
@@ -24,89 +49,59 @@ function requireAuth() {
   }
 }
 
+/** Returns display name from JWT payload */
 function getCurrentUser() {
-  return sessionStorage.getItem('crcc_user') || null;
+  const token = getToken();
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  return payload ? payload.name : null;
 }
 
+/** Returns user role from JWT payload */
+function getCurrentRole() {
+  const token = getToken();
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  return payload ? payload.role : null;
+}
+
+/** Clear JWT and redirect to login */
 function logout() {
-  sessionStorage.removeItem('crcc_token');
-  sessionStorage.removeItem('crcc_user');
+  localStorage.removeItem('crcc_jwt');
   location.replace('login.html');
 }
 
-// ── PBKDF2 crypto helpers (async) ─────────────────────────────────────────────
-async function generateSalt() {
-  const buf = crypto.getRandomValues(new Uint8Array(16));
-  return btoa(String.fromCharCode(...buf));
-}
+/**
+ * Generic API helper — attaches Bearer token and returns parsed JSON.
+ * Throws on HTTP errors. Auto-redirects to login on 401.
+ */
+async function apiRequest(method, endpoint, body) {
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
 
-async function hashPassword(password, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, 256
-  );
-  return btoa(String.fromCharCode(...new Uint8Array(bits)));
-}
+  const opts = { method, headers };
+  if (body !== undefined) opts.body = JSON.stringify(body);
 
-async function generateToken() {
-  const buf = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...buf));
-}
+  const res = await fetch('/api' + endpoint, opts);
 
-// ── User storage ──────────────────────────────────────────────────────────────
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem('crcc_users') || '[]'); } catch (e) { return []; }
-}
-
-function saveUsers(users) {
-  localStorage.setItem('crcc_users', JSON.stringify(users));
-}
-
-async function seedDefaultAdmin() {
-  if (getUsers().length === 0) {
-    const salt = await generateSalt();
-    const hash = await hashPassword('Admin@1234', salt);
-    saveUsers([{ name: 'Admin', email: 'admin@crcc.io', salt, hash, role: 'admin' }]);
+  if (res.status === 401) {
+    logout();
+    throw new Error('Session expired');
   }
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
 }
 
-// ── Login rate limiting ───────────────────────────────────────────────────────
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_MS = 15 * 60 * 1000;
-
-function getLoginAttempts() {
-  try { return JSON.parse(sessionStorage.getItem('crcc_login_attempts') || '{"count":0,"until":0}'); }
-  catch (e) { return { count: 0, until: 0 }; }
-}
-
-function recordLoginFailure() {
-  const data = getLoginAttempts();
-  data.count = (data.count || 0) + 1;
-  if (data.count >= MAX_LOGIN_ATTEMPTS) data.until = Date.now() + LOCKOUT_MS;
-  sessionStorage.setItem('crcc_login_attempts', JSON.stringify(data));
-}
-
-function clearLoginAttempts() {
-  sessionStorage.removeItem('crcc_login_attempts');
-}
-
-function isLockedOut() {
-  const data = getLoginAttempts();
-  return data.count >= MAX_LOGIN_ATTEMPTS && Date.now() < data.until;
-}
-
-// ── Override-aware data loader ────────────────────────────────────────────────
+// ── API-backed data loader ────────────────────────────────────────────────────
 async function loadIndicatorsData() {
-  const override = localStorage.getItem('crcc_indicators_override');
-  if (override) {
-    try { return JSON.parse(override); } catch (e) { /* fall through to fetch */ }
-  }
-  const res = await fetch('data/indicators.json');
-  return res.json();
+  return apiRequest('GET', '/indicators');
+}
+
+async function loadHistoryData() {
+  return apiRequest('GET', '/history');
 }
 
 // ── Translations ──────────────────────────────────────────────────────────────
@@ -141,6 +136,7 @@ const TRANSLATIONS = {
     register_error_mismatch: 'As senhas não conferem.',
     register_error_weak: 'Senha fraca: mínimo 8 caracteres, uma maiúscula e um número.',
     register_success: 'Conta criada! Redirecionando...',
+    register_password_hint: 'Mínimo 8 caracteres, uma maiúscula e um número',
     logout_btn: 'Sair',
     welcome_user: 'Olá,',
     // Admin
@@ -257,6 +253,7 @@ const TRANSLATIONS = {
     register_error_mismatch: 'Passwords do not match.',
     register_error_weak: 'Weak password: min 8 chars, one uppercase letter and one number.',
     register_success: 'Account created! Redirecting...',
+    register_password_hint: 'Min 8 chars, one uppercase letter and one number',
     logout_btn: 'Logout',
     welcome_user: 'Hello,',
     admin_title: 'Manage Indicators',
@@ -363,6 +360,7 @@ const TRANSLATIONS = {
     register_error_mismatch: 'Las contraseñas no coinciden.',
     register_error_weak: 'Contraseña débil: mín 8 chars, una mayúscula y un número.',
     register_success: '¡Cuenta creada! Redirigiendo...',
+    register_password_hint: 'Mín 8 caracteres, una mayúscula y un número',
     logout_btn: 'Cerrar Sesión',
     welcome_user: 'Hola,',
     admin_title: 'Gestionar Indicadores',
@@ -544,9 +542,33 @@ function getStatusLabel(pct) {
   return t('alert');
 }
 
+// ── Shared UI helpers ─────────────────────────────────────────────────────────
+
+/** Populate #user-greeting on any page */
+function updateUserGreeting() {
+  const name = getCurrentUser();
+  document.querySelectorAll('#user-greeting').forEach(el => {
+    el.textContent = name ? t('welcome_user') + ' ' + name : '';
+  });
+}
+
+/** Show admin-only nav links only for users with admin role */
+function applyRoleGating() {
+  const isAdmin = getCurrentRole() === 'admin';
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isAdmin ? '' : 'none';
+  });
+}
+
 // ── Auto-initialize on DOMContentLoaded ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  seedDefaultAdmin(); // async, fire-and-forget
   renderLangSwitcher('lang-switcher');
   applyLang(getLang());
+  updateUserGreeting();
+  applyRoleGating();
+});
+
+// Re-run greeting on language change (t('welcome_user') changes)
+document.addEventListener('langchange', () => {
+  updateUserGreeting();
 });

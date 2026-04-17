@@ -128,6 +128,13 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .dirty-indicator { font-size: 11px; color: var(--muted); }
 .dirty-indicator.has-changes { color: var(--gold); }
 
+@media (max-width: 960px) {
+  .header { padding: 0 12px; gap: 8px; }
+  .logo-text { display: none; }
+  .user-greeting { display: none; }
+  #lang-switcher { display: none; }
+  .nav-link { padding: 5px 8px; font-size: 12px; }
+}
 @media (max-width: 900px) {
   .ind-table th:nth-child(5),
   .ind-table td:nth-child(5),
@@ -140,7 +147,7 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 <script>requireAuth();</script>
 
 <header class="header">
-  <div class="header-logo"><span>⚡</span> Cyber Risk Command Center</div>
+  <div class="header-logo"><span>⚡</span><span class="logo-text"> Cyber Risk Command Center</span></div>
   <nav class="header-nav">
     <a href="index.html" class="nav-link" data-i18n="nav_dashboard">Dashboard</a>
     <a href="charts.html" class="nav-link analytics" data-i18n="nav_analytics">Analytics</a>
@@ -183,13 +190,8 @@ let indicatorsData = null;
 let activeTab = null;
 let isDirty = false;
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
-const _ug = document.getElementById('user-greeting');
-if (_ug) { const u = getCurrentUser(); if (u) _ug.textContent = t('welcome_user') + ' ' + u; }
-
-if (localStorage.getItem('crcc_indicators_override')) {
-  document.getElementById('override-notice').style.display = 'flex';
-}
+// ── Boot ─────────────────────────────────────────────────────────────────────
+// (User greeting and admin link gating handled by shared.js DOMContentLoaded)
 
 // ── Score helpers ─────────────────────────────────────────────────────────────
 function calcPctLocal(ind) {
@@ -305,7 +307,7 @@ function renderCategoryTab(label) {
             <th>${t('value_label')}</th>
             <th>${t('value_label')} (display)</th>
             <th>${t('target_label')}</th>
-            <th>${t('admin_period')} (display)</th>
+            <th>${t('target_label')} (display)</th>
             <th>Score %</th>
           </tr>
         </thead>
@@ -387,23 +389,39 @@ function clearDirty() {
   if (el) { el.textContent = ''; el.classList.remove('has-changes'); }
 }
 
-// ── Save ──────────────────────────────────────────────────────────────────────
-document.getElementById('btn-save').addEventListener('click', () => {
-  localStorage.setItem('crcc_indicators_override', JSON.stringify(indicatorsData));
-  document.getElementById('override-notice').style.display = 'flex';
-  clearDirty();
+// ── Save (API) ────────────────────────────────────────────────────────────────
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  try {
+    await apiRequest('PUT', '/indicators', indicatorsData);
+    document.getElementById('override-notice').style.display = 'flex';
+    clearDirty();
+    // Signal other tabs to refresh
+    localStorage.setItem('crcc_data_updated', String(Date.now()));
 
-  const toast = document.getElementById('toast');
-  toast.textContent = t('admin_saved');
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2500);
+    const toast = document.getElementById('toast');
+    toast.textContent = t('admin_saved');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  } catch (err) {
+    alert('Erro ao salvar: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
-// ── Reset ─────────────────────────────────────────────────────────────────────
-document.getElementById('btn-reset').addEventListener('click', () => {
+// ── Reset (API) ───────────────────────────────────────────────────────────────
+document.getElementById('btn-reset').addEventListener('click', async () => {
   if (!confirm(t('admin_reset_confirm'))) return;
-  localStorage.removeItem('crcc_indicators_override');
-  location.reload();
+  try {
+    await apiRequest('DELETE', '/indicators/override');
+    // Signal other tabs to refresh
+    localStorage.setItem('crcc_data_updated', String(Date.now()));
+    location.reload();
+  } catch (err) {
+    alert('Erro ao restaurar: ' + err.message);
+  }
 });
 
 // ── Export ────────────────────────────────────────────────────────────────────
@@ -427,17 +445,18 @@ document.getElementById('import-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = async (ev) => {
     try {
       const parsed = JSON.parse(ev.target.result);
       if (!parsed.metadata || !parsed.categories || !Array.isArray(parsed.categories)) {
         alert('JSON inválido: faltam campos "metadata" ou "categories".');
         return;
       }
-      localStorage.setItem('crcc_indicators_override', JSON.stringify(parsed));
+      await apiRequest('PUT', '/indicators', parsed);
+      localStorage.setItem('crcc_data_updated', String(Date.now()));
       location.reload();
     } catch (err) {
-      alert('Erro ao ler o arquivo JSON: ' + err.message);
+      alert('Erro ao importar JSON: ' + err.message);
     }
   };
   reader.readAsText(file);
@@ -450,14 +469,16 @@ document.addEventListener('langchange', () => {
   renderTabs();
   renderTabContent();
   applyLang(getLang());
-  // Update user greeting
-  const ug = document.getElementById('user-greeting');
-  if (ug) { const u = getCurrentUser(); if (u) ug.textContent = t('welcome_user') + ' ' + u; }
+  // User greeting re-translation handled by shared.js langchange listener
 });
 
 // ── Load ──────────────────────────────────────────────────────────────────────
 loadIndicatorsData().then(data => {
   indicatorsData = data;
+  // Show override notice if the backend is serving customised data
+  if (data._hasOverride) {
+    document.getElementById('override-notice').style.display = 'flex';
+  }
   activeTab = indicatorsData.categories[0].label;
   renderTabs();
   renderTabContent();

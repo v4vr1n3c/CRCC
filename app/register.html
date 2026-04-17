@@ -158,12 +158,23 @@
       color: var(--muted);
       margin-top: 4px;
     }
+
+    /* Password toggle */
+    .input-wrap { position: relative; }
+    .input-wrap .form-input { padding-right: 42px; }
+    .pw-toggle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 15px; padding: 4px; line-height: 1;
+      transition: color .15s;
+    }
+    .pw-toggle:hover { color: var(--text); }
   </style>
 </head>
 <body>
   <script>
     // Redirect already-authenticated users
-    if (sessionStorage.getItem('crcc_token')) location.replace('index.html');
+    if (checkAuth()) location.replace('index.html');
   </script>
 
   <div class="brand">
@@ -193,16 +204,22 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="password" data-i18n="register_password">Senha</label>
-        <input class="form-input" type="password" id="password" name="password"
-               autocomplete="new-password" required
-               data-i18n-placeholder="register_password" placeholder="Senha">
-        <div class="password-hint">Mínimo 8 caracteres, uma maiúscula e um número</div>
+        <div class="input-wrap">
+          <input class="form-input" type="password" id="password" name="password"
+                 autocomplete="new-password" required
+                 data-i18n-placeholder="register_password" placeholder="Senha">
+          <button type="button" class="pw-toggle" id="pw-toggle-password" aria-label="Mostrar/ocultar senha" title="Mostrar senha">👁</button>
+        </div>
+        <div class="password-hint" data-i18n="register_password_hint">Mínimo 8 caracteres, uma maiúscula e um número</div>
       </div>
       <div class="form-group">
         <label class="form-label" for="confirm" data-i18n="register_confirm">Confirmar senha</label>
-        <input class="form-input" type="password" id="confirm" name="confirm"
-               autocomplete="new-password" required
-               data-i18n-placeholder="register_confirm" placeholder="Confirmar senha">
+        <div class="input-wrap">
+          <input class="form-input" type="password" id="confirm" name="confirm"
+                 autocomplete="new-password" required
+                 data-i18n-placeholder="register_confirm" placeholder="Confirmar senha">
+          <button type="button" class="pw-toggle" id="pw-toggle-confirm" aria-label="Mostrar/ocultar senha" title="Mostrar senha">👁</button>
+        </div>
       </div>
       <button class="btn btn-primary" type="submit" id="submit-btn">
         <span data-i18n="register_btn">Criar conta</span>
@@ -248,35 +265,52 @@
       const confirm  = document.getElementById('confirm').value;
       const btn      = document.getElementById('submit-btn');
 
-      // Validation
-      if (!name) { showError('register_error_weak'); return; }
-      if (!EMAIL_RE.test(email)) { showError('login_error'); return; }
-      if (!STRONG_PW.test(password)) { showError('register_error_weak'); return; }
-      if (password !== confirm) { showError('register_error_mismatch'); return; }
-
-      // Duplicate check
-      const users = getUsers();
-      if (users.some(u => u.email.toLowerCase() === email)) {
-        showError('register_error_exists');
-        return;
-      }
+      // Client-side validation
+      if (!name)                       { showError('register_error_weak');     return; }
+      if (!EMAIL_RE.test(email))       { showError('login_error');             return; }
+      if (!STRONG_PW.test(password))   { showError('register_error_weak');     return; }
+      if (password !== confirm)        { showError('register_error_mismatch'); return; }
 
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span><span data-i18n="register_btn">' + t('register_btn') + '</span>';
 
       try {
-        const salt = await generateSalt();
-        const hash = await hashPassword(password, salt);
-        users.push({ name, email, salt, hash, role: 'user' });
-        saveUsers(users);
+        const res  = await fetch('/api/auth/register', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ name, email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.status === 409) { showError('register_error_exists');    return; }
+        if (res.status === 400) { showError('register_error_weak');      return; }
+        if (!res.ok)            { showError('login_error');              return; }
+
         showSuccess('register_success');
         setTimeout(() => location.replace('login.html'), 1500);
       } catch (err) {
         showError('login_error');
-        btn.disabled = false;
-        btn.innerHTML = '<span data-i18n="register_btn">' + t('register_btn') + '</span>';
+      } finally {
+        if (btn.disabled) {
+          btn.disabled = false;
+          btn.innerHTML = '<span data-i18n="register_btn">' + t('register_btn') + '</span>';
+        }
       }
     });
+
+    // Password visibility toggles
+    function makePwToggle(btnId, inputId) {
+      document.getElementById(btnId).addEventListener('click', function() {
+        const el = document.getElementById(inputId);
+        const show = el.type === 'password';
+        el.type = show ? 'text' : 'password';
+        this.textContent = show ? '🙈' : '👁';
+        this.title = show ? 'Ocultar senha' : 'Mostrar senha';
+      });
+    }
+    makePwToggle('pw-toggle-password', 'password');
+    makePwToggle('pw-toggle-confirm', 'confirm');
 
     document.addEventListener('langchange', () => {
       applyLang(getLang());

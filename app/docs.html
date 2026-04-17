@@ -151,6 +151,13 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 .footer-nav a.analytics { color: var(--purple); }
 .footer a { color: var(--blue); text-decoration: none; }
 
+@media (max-width: 960px) {
+  .header { padding: 0 12px; gap: 8px; }
+  .logo-text { display: none; }
+  .user-greeting { display: none; }
+  #lang-switcher { display: none; }
+  .nav-link { padding: 5px 8px; font-size: 12px; }
+}
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .docs-content { padding: 20px; }
@@ -162,12 +169,12 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 <script>requireAuth();</script>
 
 <header class="header">
-  <div class="header-logo"><span>⚡</span> Cyber Risk Command Center</div>
+  <div class="header-logo"><span>⚡</span><span class="logo-text"> Cyber Risk Command Center</span></div>
   <nav class="header-nav">
     <a href="index.html" class="nav-link" data-i18n="nav_dashboard">Dashboard</a>
     <a href="charts.html" class="nav-link analytics" data-i18n="nav_analytics">Analytics</a>
     <a href="docs.html" class="nav-link active" data-i18n="nav_docs">Documentação</a>
-    <a href="admin.html" class="nav-link" data-i18n="nav_admin">Admin</a>
+    <a href="admin.html" class="nav-link admin-only" data-i18n="nav_admin">Admin</a>
   </nav>
   <div id="lang-switcher"></div>
   <div class="header-user">
@@ -499,7 +506,7 @@ loadData().catch(err => {
 
 // Cross-tab auto-update when admin saves changes
 window.addEventListener('storage', (e) => {
-  if (e.key === 'crcc_indicators_override') loadData();
+  if (e.key === 'crcc_data_updated') loadData();
 });
 
 document.addEventListener('langchange', () => {

@@ -160,12 +160,23 @@
       margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Password toggle */
+    .input-wrap { position: relative; }
+    .input-wrap .form-input { padding-right: 42px; }
+    .pw-toggle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 15px; padding: 4px; line-height: 1;
+      transition: color .15s;
+    }
+    .pw-toggle:hover { color: var(--text); }
   </style>
 </head>
 <body>
   <script>
     // Redirect already-authenticated users
-    if (sessionStorage.getItem('crcc_token')) location.replace('index.html');
+    if (checkAuth()) location.replace('index.html');
   </script>
 
   <div class="brand">
@@ -188,9 +199,12 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="password" data-i18n="login_password">Senha</label>
-        <input class="form-input" type="password" id="password" name="password"
-               autocomplete="current-password" required
-               data-i18n-placeholder="login_password" placeholder="Senha">
+        <div class="input-wrap">
+          <input class="form-input" type="password" id="password" name="password"
+                 autocomplete="current-password" required
+                 data-i18n-placeholder="login_password" placeholder="Senha">
+          <button type="button" class="pw-toggle" id="pw-toggle-login" aria-label="Mostrar/ocultar senha" title="Mostrar/ocultar senha">👁</button>
+        </div>
       </div>
       <button class="btn btn-primary" type="submit" id="submit-btn">
         <span data-i18n="login_btn">Entrar</span>
@@ -209,11 +223,21 @@
     function getSafeNext() {
       const params = new URLSearchParams(location.search);
       const next = params.get('next') || '';
-      const allowed = ['/index.html', '/charts.html', '/docs.html', '/admin.html'];
       const decoded = decodeURIComponent(next);
-      if (next && allowed.some(p => decoded.endsWith(p))) return decoded;
+      // Exact match only — prevents open redirect bypass via endsWith trick
+      const allowed = ['/index.html', '/charts.html', '/docs.html', '/admin.html'];
+      if (decoded && allowed.includes(decoded)) return decoded;
       return 'index.html';
     }
+
+    // Password visibility toggle
+    document.getElementById('pw-toggle-login').addEventListener('click', function() {
+      const el = document.getElementById('password');
+      const show = el.type === 'password';
+      el.type = show ? 'text' : 'password';
+      this.textContent = show ? '🙈' : '👁';
+      this.title = show ? 'Ocultar senha' : 'Mostrar senha';
+    });
 
     function showError(key) {
       const el = document.getElementById('error-msg');
@@ -229,37 +253,29 @@
       e.preventDefault();
       hideError();
 
-      if (isLockedOut()) { showError('login_locked'); return; }
-
-      const email = document.getElementById('email').value.trim().toLowerCase();
+      const email    = document.getElementById('email').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
-      const btn = document.getElementById('submit-btn');
+      const btn      = document.getElementById('submit-btn');
 
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span><span data-i18n="login_btn">' + t('login_btn') + '</span>';
 
       try {
-        const users = getUsers();
-        const user = users.find(u => u.email.toLowerCase() === email);
+        const res  = await fetch('/api/auth/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, password })
+        });
 
-        if (!user) {
-          recordLoginFailure();
-          showError(isLockedOut() ? 'login_locked' : 'login_error');
-          return;
+        const data = await res.json();
+
+        if (res.status === 429) { showError('login_locked'); return; }
+        if (!res.ok)            { showError('login_error');  return; }
+
+        if (!data.token || typeof data.token !== 'string') {
+          showError('login_error'); return;
         }
-
-        const hash = await hashPassword(password, user.salt);
-
-        if (hash !== user.hash) {
-          recordLoginFailure();
-          showError(isLockedOut() ? 'login_locked' : 'login_error');
-          return;
-        }
-
-        const token = await generateToken();
-        sessionStorage.setItem('crcc_token', token);
-        sessionStorage.setItem('crcc_user', user.name);
-        clearLoginAttempts();
+        localStorage.setItem('crcc_jwt', data.token);
         location.replace(getSafeNext());
 
       } catch (err) {
