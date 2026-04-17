@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Cyber Risk Command Center</title>
+<script src="shared.js"></script>
+<style>
+:root {
+  --bg: #0D1117; --surface: #161B22; --border: #21262D;
+  --text: #E6EDF3; --muted: #8B949E;
+  --kpi: #3FB950; --kri: #F85149; --blue: #388BFD; --gold: #D29922; --purple: #BC8CFF;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100; height: 60px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px; gap: 24px;
+}
+.header-logo { font-weight: 700; font-size: 16px; white-space: nowrap; color: var(--text); }
+.header-logo span { color: var(--blue); }
+.header-nav { display: flex; gap: 4px; flex: 1; }
+.nav-link { padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted); transition: all .15s; }
+.nav-link:hover { color: var(--text); background: var(--border); }
+.nav-link.active { color: var(--text); background: var(--border); }
+.nav-link.analytics { color: var(--purple); }
+.nav-link.analytics:hover { background: rgba(188,140,255,.1); }
+#lang-switcher { display: flex; gap: 4px; }
+.lang-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all .15s; }
+.lang-btn:hover, .lang-btn.active { border-color: var(--blue); color: var(--text); background: rgba(56,139,253,.1); }
+.header-user { display: flex; align-items: center; gap: 10px; margin-left: 8px; }
+.user-greeting { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.logout-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all .15s; white-space: nowrap; }
+.logout-btn:hover { border-color: var(--kri); color: var(--kri); }
+
+/* Main */
+.main { max-width: 1400px; margin: 0 auto; padding: 24px 24px 120px; }
+.section-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+/* Tab bar */
+.tab-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+.tab-btn { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); color: var(--muted); background: transparent; transition: all .15s; white-space: nowrap; }
+.tab-btn:hover { border-color: var(--blue); color: var(--text); }
+.tab-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+.tab-btn.metadata-tab.active { background: var(--gold); border-color: var(--gold); color: #0D1117; }
+
+/* Indicator table */
+.ind-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; }
+.ind-table { width: 100%; border-collapse: collapse; }
+.ind-table th {
+  text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); padding: 10px 14px;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.ind-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ind-table tr:last-child td { border-bottom: none; }
+.ind-table tr:hover td { background: rgba(255,255,255,.02); }
+
+.ind-name { font-size: 12px; font-weight: 600; color: var(--text); max-width: 240px; }
+.badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.badge-kpi { background: rgba(63,185,80,.15); color: var(--kpi); border: 1px solid rgba(63,185,80,.3); }
+.badge-kri { background: rgba(248,81,73,.15); color: var(--kri); border: 1px solid rgba(248,81,73,.3); }
+.badge-improvement { background: rgba(210,153,34,.15); color: var(--gold); border: 1px solid rgba(210,153,34,.3); }
+
+.edit-input {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 5px 8px; border-radius: 5px; font-size: 12px; width: 100%;
+  min-width: 70px; max-width: 120px; outline: none; transition: border-color .15s;
+}
+.edit-input:focus { border-color: var(--blue); }
+.edit-input.wide { max-width: 160px; }
+.unit-label { font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+.score-cell { min-width: 90px; }
+.score-pct { font-size: 13px; font-weight: 700; }
+.score-bar-mini { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.score-bar-mini-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+
+.status-dot-cell { width: 16px; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; transition: background .3s; }
+
+/* Metadata form */
+.meta-form { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; max-width: 500px; }
+.meta-field { margin-bottom: 20px; }
+.meta-label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+.meta-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: border-color .15s; }
+.meta-input:focus { border-color: var(--blue); }
+
+/* Sticky footer bar */
+.footer-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+}
+.btn { padding: 8px 18px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--blue); color: #0D1117; }
+.btn-primary:hover { opacity: .9; }
+.btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-secondary:hover { border-color: var(--blue); color: var(--text); }
+.btn-danger { background: transparent; border: 1px solid rgba(248,81,73,.4); color: var(--kri); }
+.btn-danger:hover { background: rgba(248,81,73,.1); }
+
+.toast {
+  margin-left: auto; background: rgba(63,185,80,.15); border: 1px solid rgba(63,185,80,.3);
+  color: var(--kpi); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  display: none; animation: fadeIn .2s;
+}
+.toast.show { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Override indicator badge */
+.override-badge {
+  font-size: 10px; padding: 1px 7px; border-radius: 3px;
+  background: rgba(210,153,34,.15); color: var(--gold); border: 1px solid rgba(210,153,34,.3);
+  margin-left: 8px;
+}
+.override-notice {
+  background: rgba(210,153,34,.08); border: 1px solid rgba(210,153,34,.3);
+  border-radius: 8px; padding: 10px 16px; margin-bottom: 20px;
+  font-size: 12px; color: var(--gold); display: flex; align-items: center; gap: 8px;
+}
+
+/* Dirty indicator */
+.dirty-indicator { font-size: 11px; color: var(--muted); }
+.dirty-indicator.has-changes { color: var(--gold); }
+
+@media (max-width: 900px) {
+  .ind-table th:nth-child(5),
+  .ind-table td:nth-child(5),
+  .ind-table th:nth-child(6),
+  .ind-table td:nth-child(6) { display: none; }
+}
+</style>
+</head>
+<body>
+<script>requireAuth();</script>
+
+<header class="header">
+  <div class="header-logo"><span>⚡</span> Cyber Risk Command Center</div>
+  <nav class="header-nav">
+    <a href="index.html" class="nav-link" data-i18n="nav_dashboard">Dashboard</a>
+    <a href="charts.html" class="nav-link analytics" data-i18n="nav_analytics">Analytics</a>
+    <a href="docs.html" class="nav-link" data-i18n="nav_docs">Documentação</a>
+    <a href="admin.html" class="nav-link active" data-i18n="nav_admin">Admin</a>
+  </nav>
+  <div id="lang-switcher"></div>
+  <div class="header-user">
+    <span class="user-greeting" id="user-greeting"></span>
+    <button class="logout-btn" onclick="logout()" data-i18n="logout_btn">Sair</button>
+  </div>
+</header>
+
+<main class="main">
+  <div class="section-label" data-i18n="admin_title">GERENCIAR INDICADORES</div>
+  <div id="override-notice" style="display:none" class="override-notice">
+    ⚠️ Dados com alterações ativas. Use "Restaurar Padrões" para voltar ao JSON original.
+  </div>
+  <div class="tab-bar" id="tab-bar"></div>
+  <div id="tab-content">
+    <div style="padding:60px;text-align:center;color:var(--muted)">Carregando...</div>
+  </div>
+</main>
+
+<!-- Hidden file input for import -->
+<input type="file" id="import-input" accept=".json" style="display:none">
+
+<!-- Sticky footer bar -->
+<div class="footer-bar">
+  <button class="btn btn-primary" id="btn-save" data-i18n="admin_save">Salvar Alterações</button>
+  <button class="btn btn-secondary" id="btn-export" data-i18n="admin_export">Exportar JSON</button>
+  <button class="btn btn-secondary" id="btn-import" data-i18n="admin_import">Importar JSON</button>
+  <button class="btn btn-danger" id="btn-reset" data-i18n="admin_reset">Restaurar Padrões</button>
+  <span class="dirty-indicator" id="dirty-indicator"></span>
+  <div class="toast" id="toast" data-i18n="admin_saved">Salvo com sucesso!</div>
+</div>
+
+<script>
+let indicatorsData = null;
+let activeTab = null;
+let isDirty = false;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+const _ug = document.getElementById('user-greeting');
+if (_ug) { const u = getCurrentUser(); if (u) _ug.textContent = t('welcome_user') + ' ' + u; }
+
+if (localStorage.getItem('crcc_indicators_override')) {
+  document.getElementById('override-notice').style.display = 'flex';
+}
+
+// ── Score helpers ─────────────────────────────────────────────────────────────
+function calcPctLocal(ind) {
+  const { direction, target, warningThreshold, value } = ind;
+  if (value == null) return null;
+  if (direction === 'higher_better') return Math.min(100, (value / target) * 100);
+  if (target === 0) {
+    if (!warningThreshold) return value === 0 ? 100 : 0;
+    return Math.max(0, 100 - (value / warningThreshold) * 100);
+  }
+  if (value <= target) return 100;
+  return Math.max(0, 100 - ((value - target) / target * 100));
+}
+
+function statusColor(pct) {
+  if (pct === null) return '#8B949E';
+  if (pct >= 85) return '#3FB950';
+  if (pct >= 50) return '#D29922';
+  return '#F85149';
+}
+
+// ── Tab rendering ─────────────────────────────────────────────────────────────
+function renderTabs() {
+  const bar = document.getElementById('tab-bar');
+  const tabs = [...indicatorsData.categories.map(c => c.label), 'METADATA'];
+  bar.innerHTML = tabs.map(label => {
+    const isMeta = label === 'METADATA';
+    const isActive = label === activeTab;
+    return `<button class="tab-btn${isMeta ? ' metadata-tab' : ''}${isActive ? ' active' : ''}"
+      data-label="${escapeHtml(label)}">${escapeHtml(isMeta ? t('admin_metadata') : label)}</button>`;
+  }).join('');
+
+  bar.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.label;
+      renderTabs();
+      renderTabContent();
+    });
+  });
+}
+
+// ── Tab content ───────────────────────────────────────────────────────────────
+function renderTabContent() {
+  if (activeTab === 'METADATA') {
+    renderMetadataTab();
+  } else {
+    renderCategoryTab(activeTab);
+  }
+}
+
+function renderCategoryTab(label) {
+  const cat = indicatorsData.categories.find(c => c.label === label);
+  if (!cat) return;
+
+  const rows = cat.indicators.map((ind, idx) => {
+    const pct = calcPctLocal(ind);
+    const color = statusColor(pct);
+    const pctStr = pct !== null ? Math.round(pct) + '%' : '—';
+    const barW = pct !== null ? Math.min(100, pct) : 0;
+
+    return `<tr data-cat="${escapeHtml(cat.label)}" data-idx="${idx}">
+      <td>
+        <div class="status-dot-cell">
+          <div class="status-dot" id="dot-${escapeHtml(cat.label)}-${idx}" style="background:${color}"></div>
+        </div>
+      </td>
+      <td>
+        <div class="ind-name">${escapeHtml(ind.name)}</div>
+        ${ind.isImprovement ? `<span class="badge badge-improvement" style="margin-top:4px;display:inline-block">${t('badge_improvement')}</span>` : ''}
+      </td>
+      <td><span class="badge badge-${ind.type.toLowerCase()}">${escapeHtml(ind.type)}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input class="edit-input" type="number" step="any"
+            data-field="value" data-cat="${escapeHtml(cat.label)}" data-idx="${idx}"
+            value="${ind.value != null ? ind.value : ''}" placeholder="—">
+          <span class="unit-label">${escapeHtml(ind.unit || '')}</span>
+        </div>
+      </td>
+      <td>
+        <input class="edit-input wide" type="text"
+          data-field="valueDisplay" data-cat="${escapeHtml(cat.label)}" data-idx="${idx}"
+          value="${escapeHtml(ind.valueDisplay || '')}" placeholder="ex: 3.2h">
+      </td>
+      <td>
+        <input class="edit-input" type="number" step="any"
+          data-field="target" data-cat="${escapeHtml(cat.label)}" data-idx="${idx}"
+          value="${ind.target != null ? ind.target : ''}" placeholder="—">
+      </td>
+      <td>
+        <input class="edit-input wide" type="text"
+          data-field="targetDisplay" data-cat="${escapeHtml(cat.label)}" data-idx="${idx}"
+          value="${escapeHtml(ind.targetDisplay || '')}" placeholder="ex: &lt; 4h">
+      </td>
+      <td class="score-cell">
+        <div class="score-pct" id="pct-${escapeHtml(cat.label)}-${idx}" style="color:${color}">${pctStr}</div>
+        <div class="score-bar-mini">
+          <div class="score-bar-mini-fill" id="bar-${escapeHtml(cat.label)}-${idx}"
+            style="width:${barW}%;background:${color}"></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tab-content').innerHTML = `
+    <div class="ind-table-wrap">
+      <table class="ind-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Indicador</th>
+            <th>Tipo</th>
+            <th>${t('value_label')}</th>
+            <th>${t('value_label')} (display)</th>
+            <th>${t('target_label')}</th>
+            <th>${t('admin_period')} (display)</th>
+            <th>Score %</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  // Attach live-recalculation listeners
+  document.querySelectorAll('.edit-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const catLabel = input.dataset.cat;
+      const idx = parseInt(input.dataset.idx, 10);
+      const field = input.dataset.field;
+      const cat = indicatorsData.categories.find(c => c.label === catLabel);
+      if (!cat) return;
+
+      const ind = cat.indicators[idx];
+      const rawVal = input.value;
+
+      // Update in-memory copy
+      if (field === 'value' || field === 'target') {
+        ind[field] = rawVal === '' ? null : parseFloat(rawVal);
+      } else {
+        ind[field] = rawVal;
+      }
+
+      // Recalculate score
+      const pct = calcPctLocal(ind);
+      const color = statusColor(pct);
+      const pctStr = pct !== null ? Math.round(pct) + '%' : '—';
+      const barW = pct !== null ? Math.min(100, pct) : 0;
+
+      const dotEl = document.getElementById(`dot-${catLabel}-${idx}`);
+      const pctEl = document.getElementById(`pct-${catLabel}-${idx}`);
+      const barEl = document.getElementById(`bar-${catLabel}-${idx}`);
+      if (dotEl) dotEl.style.background = color;
+      if (pctEl) { pctEl.textContent = pctStr; pctEl.style.color = color; }
+      if (barEl) { barEl.style.width = barW + '%'; barEl.style.background = color; }
+
+      markDirty();
+    });
+  });
+}
+
+function renderMetadataTab() {
+  const meta = indicatorsData.metadata;
+  document.getElementById('tab-content').innerHTML = `
+    <div class="meta-form">
+      <div class="meta-field">
+        <label class="meta-label" data-i18n="admin_period">${t('admin_period')}</label>
+        <input class="meta-input" type="text" id="meta-period" value="${escapeHtml(meta.period || '')}">
+      </div>
+      <div class="meta-field">
+        <label class="meta-label" data-i18n="admin_last_updated">${t('admin_last_updated')}</label>
+        <input class="meta-input" type="text" id="meta-last-updated" value="${escapeHtml(meta.lastUpdated || '')}">
+      </div>
+    </div>`;
+
+  document.getElementById('meta-period').addEventListener('input', (e) => {
+    indicatorsData.metadata.period = e.target.value;
+    markDirty();
+  });
+  document.getElementById('meta-last-updated').addEventListener('input', (e) => {
+    indicatorsData.metadata.lastUpdated = e.target.value;
+    markDirty();
+  });
+}
+
+// ── Dirty state ───────────────────────────────────────────────────────────────
+function markDirty() {
+  isDirty = true;
+  const el = document.getElementById('dirty-indicator');
+  if (el) { el.textContent = '● ' + t('admin_save'); el.classList.add('has-changes'); }
+}
+
+function clearDirty() {
+  isDirty = false;
+  const el = document.getElementById('dirty-indicator');
+  if (el) { el.textContent = ''; el.classList.remove('has-changes'); }
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+document.getElementById('btn-save').addEventListener('click', () => {
+  localStorage.setItem('crcc_indicators_override', JSON.stringify(indicatorsData));
+  document.getElementById('override-notice').style.display = 'flex';
+  clearDirty();
+
+  const toast = document.getElementById('toast');
+  toast.textContent = t('admin_saved');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+});
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!confirm(t('admin_reset_confirm'))) return;
+  localStorage.removeItem('crcc_indicators_override');
+  location.reload();
+});
+
+// ── Export ────────────────────────────────────────────────────────────────────
+document.getElementById('btn-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(indicatorsData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'indicators.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Import ────────────────────────────────────────────────────────────────────
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('import-input').click();
+});
+
+document.getElementById('import-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (!parsed.metadata || !parsed.categories || !Array.isArray(parsed.categories)) {
+        alert('JSON inválido: faltam campos "metadata" ou "categories".');
+        return;
+      }
+      localStorage.setItem('crcc_indicators_override', JSON.stringify(parsed));
+      location.reload();
+    } catch (err) {
+      alert('Erro ao ler o arquivo JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  // Reset so same file can be re-selected
+  e.target.value = '';
+});
+
+// ── Lang change ───────────────────────────────────────────────────────────────
+document.addEventListener('langchange', () => {
+  renderTabs();
+  renderTabContent();
+  applyLang(getLang());
+  // Update user greeting
+  const ug = document.getElementById('user-greeting');
+  if (ug) { const u = getCurrentUser(); if (u) ug.textContent = t('welcome_user') + ' ' + u; }
+});
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+loadIndicatorsData().then(data => {
+  indicatorsData = data;
+  activeTab = indicatorsData.categories[0].label;
+  renderTabs();
+  renderTabContent();
+}).catch(err => {
+  document.getElementById('tab-content').innerHTML =
+    `<div style="padding:60px;text-align:center;color:var(--kri)">${t('error_loading')}</div>`;
+  console.error(err);
+});
+</script>
+</body>
+</html>

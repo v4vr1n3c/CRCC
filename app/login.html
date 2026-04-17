@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Cyber Risk Command Center</title>
+  <script src="shared.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0D1117;
+      --card: #161B22;
+      --border: #30363D;
+      --blue: #58A6FF;
+      --green: #3FB950;
+      --red: #F85149;
+      --gold: #D29922;
+      --text: #C9D1D9;
+      --muted: #8B949E;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .brand-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .brand-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .brand-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--blue); }
+    .form-input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      margin-top: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--blue);
+      color: #0D1117;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .alert {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert-error { background: rgba(248,81,73,0.12); border: 1px solid rgba(248,81,73,0.3); color: var(--red); }
+    .alert.show { display: block; }
+
+    .footer-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    .footer-link a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .footer-link a:hover { text-decoration: underline; }
+
+    .lang-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 24px;
+      justify-content: center;
+    }
+    .lang-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lang-btn:hover, .lang-btn.active {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(13,17,23,0.4);
+      border-top-color: #0D1117;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <script>
+    // Redirect already-authenticated users
+    if (sessionStorage.getItem('crcc_token')) location.replace('index.html');
+  </script>
+
+  <div class="brand">
+    <div class="brand-icon">⚡</div>
+    <div class="brand-name">Cyber Risk Command Center</div>
+    <div class="brand-sub">Executive Cybersecurity Dashboard</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="login_title">Entrar</div>
+
+    <div class="alert alert-error" id="error-msg"></div>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="email" data-i18n="login_email">E-mail</label>
+        <input class="form-input" type="email" id="email" name="email"
+               autocomplete="email" required
+               data-i18n-placeholder="login_email" placeholder="E-mail">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password" data-i18n="login_password">Senha</label>
+        <input class="form-input" type="password" id="password" name="password"
+               autocomplete="current-password" required
+               data-i18n-placeholder="login_password" placeholder="Senha">
+      </div>
+      <button class="btn btn-primary" type="submit" id="submit-btn">
+        <span data-i18n="login_btn">Entrar</span>
+      </button>
+    </form>
+
+    <div class="footer-link">
+      <span data-i18n="login_no_account">Não tem conta?</span>
+      <a href="register.html" data-i18n="login_register_link">Cadastre-se</a>
+    </div>
+  </div>
+
+  <div class="lang-bar" id="lang-switcher"></div>
+
+  <script>
+    function getSafeNext() {
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next') || '';
+      const allowed = ['/index.html', '/charts.html', '/docs.html', '/admin.html'];
+      const decoded = decodeURIComponent(next);
+      if (next && allowed.some(p => decoded.endsWith(p))) return decoded;
+      return 'index.html';
+    }
+
+    function showError(key) {
+      const el = document.getElementById('error-msg');
+      el.textContent = t(key);
+      el.classList.add('show');
+    }
+
+    function hideError() {
+      document.getElementById('error-msg').classList.remove('show');
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      if (isLockedOut()) { showError('login_locked'); return; }
+
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('submit-btn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span><span data-i18n="login_btn">' + t('login_btn') + '</span>';
+
+      try {
+        const users = getUsers();
+        const user = users.find(u => u.email.toLowerCase() === email);
+
+        if (!user) {
+          recordLoginFailure();
+          showError(isLockedOut() ? 'login_locked' : 'login_error');
+          return;
+        }
+
+        const hash = await hashPassword(password, user.salt);
+
+        if (hash !== user.hash) {
+          recordLoginFailure();
+          showError(isLockedOut() ? 'login_locked' : 'login_error');
+          return;
+        }
+
+        const token = await generateToken();
+        sessionStorage.setItem('crcc_token', token);
+        sessionStorage.setItem('crcc_user', user.name);
+        clearLoginAttempts();
+        location.replace(getSafeNext());
+
+      } catch (err) {
+        showError('login_error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span data-i18n="login_btn">' + t('login_btn') + '</span>';
+      }
+    });
+
+    // Re-translate on lang change
+    document.addEventListener('langchange', () => {
+      applyLang(getLang());
+      // Re-translate button text if not loading
+      const btn = document.getElementById('submit-btn');
+      if (!btn.disabled) btn.innerHTML = '<span data-i18n="login_btn">' + t('login_btn') + '</span>';
+    });
+  </script>
+</body>
+</html>

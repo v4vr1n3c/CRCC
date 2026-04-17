@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentação — Cyber Risk Command Center</title>
+<script src="shared.js"></script>
+<style>
+:root {
+  --bg: #0D1117; --surface: #161B22; --border: #21262D;
+  --text: #E6EDF3; --muted: #8B949E;
+  --kpi: #3FB950; --kri: #F85149; --blue: #388BFD; --gold: #D29922; --purple: #BC8CFF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100; height: 60px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px; gap: 24px;
+}
+.header-logo { font-weight: 700; font-size: 16px; color: var(--text); white-space: nowrap; }
+.header-logo span { color: var(--blue); }
+.header-nav { display: flex; gap: 4px; flex: 1; }
+.nav-link { padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; color: var(--muted); transition: all .15s; }
+.nav-link:hover { color: var(--text); background: var(--border); }
+.nav-link.active { color: var(--text); background: var(--border); }
+.nav-link.analytics { color: var(--purple); }
+.nav-link.analytics:hover { background: rgba(188,140,255,.1); }
+#lang-switcher { display: flex; gap: 4px; }
+.lang-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; transition: all .15s; }
+.lang-btn:hover, .lang-btn.active { border-color: var(--blue); color: var(--text); background: rgba(56,139,253,.1); }
+.header-user { display: flex; align-items: center; gap: 10px; margin-left: 8px; }
+.user-greeting { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.logout-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all .15s; white-space: nowrap; }
+.logout-btn:hover { border-color: var(--kri); color: var(--kri); }
+
+/* Layout */
+.docs-layout { display: flex; min-height: calc(100vh - 60px); }
+
+/* Sidebar */
+.sidebar {
+  width: 260px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); position: sticky;
+  top: 60px; height: calc(100vh - 60px); overflow-y: auto; padding: 20px 0;
+}
+.sidebar-section { padding: 4px 16px; margin-bottom: 4px; }
+.sidebar-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; padding: 0 4px; }
+.sidebar-link {
+  display: block; padding: 6px 10px; border-radius: 6px;
+  color: var(--muted); text-decoration: none; font-size: 13px; transition: all .15s;
+}
+.sidebar-link:hover { color: var(--text); background: var(--border); }
+.sidebar-link.active { color: var(--text); background: var(--border); }
+.sidebar-divider { height: 1px; background: var(--border); margin: 10px 16px; }
+
+/* Main content */
+.docs-content { flex: 1; padding: 32px 40px; max-width: 1100px; overflow-x: hidden; }
+.section-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+/* Doc sections */
+.doc-section { margin-bottom: 48px; scroll-margin-top: 80px; }
+.doc-section-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.doc-section-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+
+/* Formula blocks */
+.formula-block {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 4px solid var(--blue); border-radius: 8px;
+  padding: 16px 20px; margin-bottom: 16px;
+}
+.formula-block.green { border-left-color: var(--kpi); }
+.formula-block.red   { border-left-color: var(--kri); }
+.formula-block.gold  { border-left-color: var(--gold); }
+.formula-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
+.formula-code { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; color: var(--blue); line-height: 1.7; }
+
+/* Status legend */
+.status-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.status-item { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-size: 13px; }
+.status-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+/* Executive score cards */
+.exec-score-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; }
+.exec-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px;
+  border-top: 3px solid transparent;
+}
+.exec-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.exec-icon { font-size: 24px; }
+.exec-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.exec-count { font-size: 11px; padding: 2px 8px; border-radius: 12px; background: var(--border); color: var(--muted); margin-left: auto; }
+.exec-description { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+.contributor-section { margin-bottom: 12px; }
+.contributor-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: var(--border); color: var(--muted); }
+.chip .count { font-weight: 600; }
+.key-indicators { margin-top: 12px; }
+.key-indicators-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+.key-ind-list { list-style: none; }
+.key-ind-list li { font-size: 12px; color: var(--muted); padding: 2px 0; }
+.key-ind-list li::before { content: '›'; margin-right: 6px; color: var(--border); }
+
+/* Category doc sections */
+.cat-section { margin-bottom: 40px; scroll-margin-top: 80px; }
+.cat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.cat-title { font-size: 17px; font-weight: 700; color: var(--text); }
+.cat-label-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: var(--border); color: var(--muted); }
+
+.ind-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.ind-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+}
+.ind-card.improvement { border-left: 3px solid var(--gold); }
+.ind-card-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+.ind-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+.badge-kpi { background: rgba(63,185,80,.15); color: var(--kpi); border: 1px solid rgba(63,185,80,.3); }
+.badge-kri { background: rgba(248,81,73,.15); color: var(--kri); border: 1px solid rgba(248,81,73,.3); }
+.badge-improvement { background: rgba(210,153,34,.15); color: var(--gold); border: 1px solid rgba(210,153,34,.3); }
+.ind-description { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.ind-formula { font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; color: var(--blue); background: rgba(56,139,253,.08); border: 1px solid rgba(56,139,253,.2); padding: 6px 10px; border-radius: 5px; margin-bottom: 10px; }
+.ind-section-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+.ind-rationale { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.6; border-top: 1px solid var(--border); padding-top: 8px; }
+.ref-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+.ref-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; background: var(--border); color: var(--muted); font-weight: 500; }
+.score-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.score-tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.score-tag.hygiene { border: 1px solid rgba(56,139,253,.4); color: var(--blue); background: rgba(56,139,253,.08); }
+.score-tag.resilience { border: 1px solid rgba(63,185,80,.4); color: var(--kpi); background: rgba(63,185,80,.08); }
+.score-tag.human { border: 1px solid rgba(210,153,34,.4); color: var(--gold); background: rgba(210,153,34,.08); }
+.score-tag.risk { border: 1px solid rgba(248,81,73,.4); color: var(--kri); background: rgba(248,81,73,.08); }
+
+.score-bar-container { margin: 10px 0 6px; }
+.score-bar-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; }
+.score-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 3px; }
+
+.loading { padding: 60px; text-align: center; color: var(--muted); }
+
+/* Footer */
+.footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+.footer-nav { display: flex; justify-content: center; gap: 20px; margin-bottom: 12px; }
+.footer-nav a { color: var(--muted); text-decoration: none; }
+.footer-nav a:hover { color: var(--text); }
+.footer-nav a.analytics { color: var(--purple); }
+.footer a { color: var(--blue); text-decoration: none; }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .docs-content { padding: 20px; }
+  .exec-score-grid, .ind-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<script>requireAuth();</script>
+
+<header class="header">
+  <div class="header-logo"><span>⚡</span> Cyber Risk Command Center</div>
+  <nav class="header-nav">
+    <a href="index.html" class="nav-link" data-i18n="nav_dashboard">Dashboard</a>
+    <a href="charts.html" class="nav-link analytics" data-i18n="nav_analytics">Analytics</a>
+    <a href="docs.html" class="nav-link active" data-i18n="nav_docs">Documentação</a>
+    <a href="admin.html" class="nav-link" data-i18n="nav_admin">Admin</a>
+  </nav>
+  <div id="lang-switcher"></div>
+  <div class="header-user">
+    <span class="user-greeting" id="user-greeting"></span>
+    <button class="logout-btn" onclick="logout()" data-i18n="logout_btn">Sair</button>
+  </div>
+</header>
+
+<div class="docs-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="loading">Carregando...</div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="docs-content">
+    <div class="section-label" data-i18n="section_docs">DOCUMENTAÇÃO</div>
+    <div id="docs-body">
+      <div class="loading">Carregando dados...</div>
+    </div>
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="footer-nav">
+    <a href="index.html" data-i18n="nav_dashboard">Dashboard</a>
+    <a href="charts.html" class="analytics" data-i18n="nav_analytics">Analytics</a>
+    <a href="docs.html" data-i18n="nav_docs">Documentação</a>
+  </div>
+  <div data-i18n="footer_created">Criado por Arthur Paixao</div>
+  <div style="margin-top:4px;"><a href="https://linkedin.com/in/arthurpaixao/" target="_blank">linkedin.com/in/arthurpaixao/</a></div>
+</footer>
+
+<script>
+let indicatorsData = null;
+
+const DOMAIN_COLORS = [
+  '#388BFD','#3FB950','#D29922','#F85149','#BC8CFF',
+  '#58A6FF','#56D364','#E3B341','#FF7B72','#D2A8FF',
+  '#79C0FF','#7EE787','#F0883E','#FFA657'
+];
+
+const EXEC_SCORE_META = {
+  hygiene: {
+    color: '#388BFD',
+    description: 'O Hygiene Score mede a postura preventiva de segurança da organização. Reflete a eficácia dos controles de identidade, cobertura de vulnerabilidades, proteção de endpoints e configuração segura de cloud e infraestrutura. Um score alto indica que a organização mantém o "básico bem feito" — bloqueando a maioria dos vetores de ataque conhecidos antes que sejam explorados.',
+    keyIndicators: ['MFA Coverage', 'Critical Patch SLA', 'Scan Coverage', 'EDR Coverage', 'Cloud Posture Score', 'CIS Hardening Compliance', 'SSL/TLS Validity', 'IAM Least Privilege']
+  },
+  resilience: {
+    color: '#3FB950',
+    description: 'O Resilience Score mede a capacidade da organização de detectar, responder e se recuperar de incidentes de segurança. Combina métricas operacionais do SOC (MTTD, MTTR, MTTC), capacidades de detecção (IDS/IPS, MITRE coverage) e robustez de continuidade (Backup RTO, DDoS protection, DR/BCP). Um score alto indica que a organização consegue conter incidentes rapidamente e se recuperar com mínimo impacto.',
+    keyIndicators: ['MTTD', 'MTTR', 'MTTC', 'False Positive Rate', 'Compliance Score', 'Backup RTO', 'MITRE ATT&CK Coverage', 'Intel to Action Time']
+  },
+  human: {
+    color: '#D29922',
+    description: 'O Human Score mede a maturidade da cultura de segurança e a eficácia dos programas de conscientização. Inclui métricas de treinamento, simulações de phishing, reporte voluntário de incidentes e capacitação em desenvolvimento seguro. Um score alto indica que os funcionários são um ativo de segurança — identificando e reportando ameaças em vez de serem o vetor de entrada.',
+    keyIndicators: ['Phishing Click Rate', 'Security Training Completion', 'User Reported Incidents', 'Secure Code Training', 'BU Training Completion', 'Phishing Simulation Click Rate', 'Tabletop Exercises']
+  },
+  risk: {
+    color: '#F85149',
+    description: 'O Risk Score mede a exposição atual a riscos críticos que podem resultar em incidentes de alto impacto. Agrega indicadores de risco residual de múltiplos domínios: incidentes críticos, vulnerabilidades exploráveis, identidades sem controle, ativos expostos, achados de Red Team e presença em dark web. Um score alto (próximo de 100%) indica exposição mínima — menos riscos críticos abertos.',
+    keyIndicators: ['P1 Critical Incidents', 'Critical Vulns Open', 'Privileged Accounts in PAM', 'Orphan Accounts', 'High Risk Vendors', 'Cyber VaR', 'Red Team Critical Findings', 'Dark Web Mentions']
+  }
+};
+
+// References by methodology
+function getReferences(ind) {
+  const refs = [];
+  const name = ind.name.toLowerCase();
+  const desc = (ind.description + ' ' + (ind.rationale || '')).toLowerCase();
+  if (desc.includes('nist') || name.includes('compliance') || name.includes('framework')) refs.push('NIST');
+  if (desc.includes('cis') || name.includes('cis') || name.includes('hardening') || name.includes('benchmark')) refs.push('CIS');
+  if (desc.includes('owasp') || name.includes('api') || name.includes('sast') || name.includes('dast') || name.includes('waf') || name.includes('app')) refs.push('OWASP');
+  if (desc.includes('mitre') || name.includes('mitre') || name.includes('att&ck') || name.includes('ttp')) refs.push('MITRE ATT&CK');
+  if (desc.includes('iso') || desc.includes('27001') || name.includes('compliance')) refs.push('ISO 27001');
+  if (desc.includes('gartner') || name.includes('jit') || name.includes('jea') || name.includes('cnapp') || name.includes('ztna') || name.includes('sase')) refs.push('Gartner');
+  if (desc.includes('fair') || name.includes('var') || name.includes('quantif') || name.includes('loss')) refs.push('FAIR');
+  if (desc.includes('pci') || name.includes('pci')) refs.push('PCI-DSS');
+  if (desc.includes('lgpd') || desc.includes('gdpr')) refs.push('LGPD/GDPR');
+  if (!refs.length) refs.push('Best Practice');
+  return refs;
+}
+
+function getFormula(ind) {
+  if (ind.direction === 'higher_better') {
+    return `min(100, (${ind.value} / ${ind.target}) × 100)`;
+  }
+  if (ind.target === 0) {
+    if (ind.warningThreshold) {
+      return `max(0, 100 − (${ind.value} / ${ind.warningThreshold}) × 100)`;
+    }
+    return `${ind.value} === 0 ? 100 : 0`;
+  }
+  if (ind.value <= ind.target) return `100 (valor ≤ meta)`;
+  return `max(0, 100 − ((${ind.value} − ${ind.target}) / ${ind.target} × 100))`;
+}
+
+function calcPct(ind) {
+  const { direction, target, warningThreshold, value } = ind;
+  if (value == null) return null;
+  if (direction === 'higher_better') return Math.min(100, (value / target) * 100);
+  if (target === 0) {
+    if (!warningThreshold) return value === 0 ? 100 : 0;
+    return Math.max(0, 100 - (value / warningThreshold) * 100);
+  }
+  if (value <= target) return 100;
+  return Math.max(0, 100 - ((value - target) / target * 100));
+}
+
+function getStatusColor(pct) {
+  if (pct === null) return '#8B949E';
+  if (pct >= 85) return '#3FB950';
+  if (pct >= 50) return '#D29922';
+  return '#F85149';
+}
+
+// ── Render sidebar ────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  let html = `
+    <div class="sidebar-section">
+      <div class="sidebar-title">Overview</div>
+      <a class="sidebar-link" href="#exec-scores" data-i18n="sidebar_exec_scores">${t('sidebar_exec_scores')}</a>
+      <a class="sidebar-link" href="#calc-methodology" data-i18n="sidebar_methodology">${t('sidebar_methodology')}</a>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Domínios</div>`;
+
+  indicatorsData.categories.forEach((cat, i) => {
+    const color = DOMAIN_COLORS[i % DOMAIN_COLORS.length];
+    html += `<a class="sidebar-link" href="#cat-${escapeHtml(cat.id)}" style="border-left:2px solid ${color}; padding-left:8px; margin-left:2px;">
+      ${escapeHtml(cat.label)} <span style="color:var(--muted);font-size:11px;margin-left:4px;">${cat.indicators.length}</span>
+    </a>`;
+  });
+
+  html += `</div>`;
+  sidebar.innerHTML = html;
+
+  // Active link on scroll
+  const links = sidebar.querySelectorAll('.sidebar-link[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('[id]').forEach(el => observer.observe(el));
+}
+
+// ── Render exec score cards ───────────────────────────────────────────────────
+function renderExecScores() {
+  const scoreKeys = ['hygiene','resilience','human','risk'];
+  const scoreNameKeys = { hygiene:'hygiene_score', resilience:'resilience_score', human:'human_score', risk:'risk_score' };
+  const all = indicatorsData.categories.flatMap(c => c.indicators);
+
+  return `
+    <div class="doc-section" id="exec-scores">
+      <div class="doc-section-title" data-i18n="exec_scores_title">${t('exec_scores_title')}</div>
+      <div class="doc-section-subtitle">Executive Score = (Σ score(indicadorᵢ)) / n — média dos scores calculados para todos os indicadores não-melhoria que alimentam esse score</div>
+
+      <div class="exec-score-grid">
+        ${scoreKeys.map(key => {
+          const meta = EXEC_SCORE_META[key];
+          const def = indicatorsData.scoreDefinitions[key];
+          const relevantInds = all.filter(i => !i.isImprovement && i.scores && i.scores.includes(key));
+
+          // Contributor domains
+          const domainMap = {};
+          indicatorsData.categories.forEach(cat => {
+            const count = cat.indicators.filter(i => !i.isImprovement && i.scores && i.scores.includes(key)).length;
+            if (count > 0) domainMap[cat.label] = count;
+          });
+
+          return `
+            <div class="exec-card" style="border-top-color:${meta.color}">
+              <div class="exec-card-header">
+                <div class="exec-icon">${def.icon}</div>
+                <div class="exec-name" data-i18n="${scoreNameKeys[key]}">${t(scoreNameKeys[key])}</div>
+                <div class="exec-count">${relevantInds.length} ${t('indicator_count')}</div>
+              </div>
+              <div class="exec-description">${meta.description}</div>
+              <div class="contributor-section">
+                <div class="contributor-label" data-i18n="contributors">${t('contributors')}</div>
+                <div class="chip-row">
+                  ${Object.entries(domainMap).map(([label, cnt]) =>
+                    `<span class="chip">${label} <span class="count">(${cnt})</span></span>`
+                  ).join('')}
+                </div>
+              </div>
+              <div class="key-indicators">
+                <div class="key-indicators-label" data-i18n="key_indicators">${t('key_indicators')}</div>
+                <ul class="key-ind-list">
+                  ${meta.keyIndicators.map(i => `<li>${i}</li>`).join('')}
+                </ul>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Render methodology ────────────────────────────────────────────────────────
+function renderMethodology() {
+  return `
+    <div class="doc-section" id="calc-methodology">
+      <div class="doc-section-title" data-i18n="methodology_title">${t('methodology_title')}</div>
+
+      <div class="formula-block green">
+        <div class="formula-label" data-i18n="formula_higher">${t('formula_higher')}</div>
+        <div class="formula-code">score = min(100, (value / target) × 100)</div>
+      </div>
+
+      <div class="formula-block red">
+        <div class="formula-label" data-i18n="formula_lower">${t('formula_lower')}</div>
+        <div class="formula-code">if value ≤ target → 100<br>else → max(0, 100 − ((value − target) / target × 100))</div>
+      </div>
+
+      <div class="formula-block gold">
+        <div class="formula-label" data-i18n="formula_zero">${t('formula_zero')}</div>
+        <div class="formula-code">if warningThreshold → max(0, 100 − (value / warningThreshold × 100))<br>else → value === 0 ? 100 : 0</div>
+      </div>
+
+      <div class="status-legend">
+        <div class="status-item">
+          <div class="status-dot" style="background:#3FB950"></div>
+          <span data-i18n="status_green">${t('status_green')}</span>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" style="background:#D29922"></div>
+          <span data-i18n="status_gold">${t('status_gold')}</span>
+        </div>
+        <div class="status-item">
+          <div class="status-dot" style="background:#F85149"></div>
+          <span data-i18n="status_red">${t('status_red')}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Render category doc sections ──────────────────────────────────────────────
+function renderCategories() {
+  return indicatorsData.categories.map((cat, i) => {
+    const color = DOMAIN_COLORS[i % DOMAIN_COLORS.length];
+    const indsHtml = cat.indicators.map(ind => {
+      const pct = calcPct(ind);
+      const barColor = getStatusColor(pct);
+      const refs = getReferences(ind);
+      const formula = getFormula(ind);
+      const pctDisplay = pct !== null ? Math.round(pct) + '%' : '—';
+
+      return `
+        <div class="ind-card${ind.isImprovement ? ' improvement' : ''}">
+          <div class="ind-card-header">
+            <div class="ind-title">${escapeHtml(ind.name)}</div>
+            <span class="badge badge-${ind.type.toLowerCase()}">${ind.type}</span>
+            ${ind.isImprovement ? `<span class="badge badge-improvement">${t('badge_improvement')}</span>` : ''}
+          </div>
+          <div class="ind-description">${escapeHtml(ind.description)}</div>
+
+          <div class="ind-section-label" data-i18n="formula_label">${t('formula_label')}</div>
+          <div class="ind-formula">${escapeHtml(formula)}</div>
+
+          ${ind.rationale ? `
+            <div class="ind-section-label" data-i18n="rationale_label">${t('rationale_label')}</div>
+            <div class="ind-rationale">${escapeHtml(ind.rationale)}</div>
+          ` : ''}
+
+          <div class="ind-section-label" data-i18n="methodology_reference">${t('methodology_reference')}</div>
+          <div class="ref-row">
+            ${refs.map(r => `<span class="ref-badge">${escapeHtml(r)}</span>`).join('')}
+          </div>
+
+          ${(ind.scores && ind.scores.length) ? `
+            <div class="ind-section-label" data-i18n="scores_fed">${t('scores_fed')}</div>
+            <div class="score-tags">
+              ${ind.scores.map(s => `<span class="score-tag ${escapeHtml(s)}">${escapeHtml(indicatorsData.scoreDefinitions[s]?.name || s)}</span>`).join('')}
+            </div>
+          ` : ''}
+
+          <div class="score-bar-container">
+            <div class="score-bar-row">
+              <span style="color:var(--muted);font-size:11px;">${t('value_label')}: <strong style="color:var(--text)">${escapeHtml(ind.valueDisplay)}</strong> / ${t('target_label')}: ${escapeHtml(ind.targetDisplay)}</span>
+              <span style="color:${barColor};font-weight:700;font-size:12px;">${pctDisplay}</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill" style="width:${pct !== null ? Math.min(100,pct) : 0}%;background:${barColor}"></div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="cat-section" id="cat-${escapeHtml(cat.id)}">
+        <div class="cat-header">
+          <div class="cat-dot" style="background:${color}"></div>
+          <div class="cat-title">${escapeHtml(cat.name)}</div>
+          <div class="cat-label-badge">${escapeHtml(cat.label)}</div>
+        </div>
+        <div class="ind-grid">${indsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function renderAll() {
+  document.getElementById('docs-body').innerHTML =
+    renderExecScores() + renderMethodology() + renderCategories();
+  renderSidebar();
+  applyLang(getLang());
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+const _ug = document.getElementById('user-greeting');
+if (_ug) { const u = getCurrentUser(); if (u) _ug.textContent = t('welcome_user') + ' ' + u; }
+
+async function loadData() {
+  indicatorsData = await loadIndicatorsData();
+  renderAll();
+}
+
+loadData().catch(err => {
+  document.getElementById('docs-body').innerHTML =
+    `<div class="loading" style="color:var(--kri)">${t('error_loading')}</div>`;
+  console.error(err);
+});
+
+// Cross-tab auto-update when admin saves changes
+window.addEventListener('storage', (e) => {
+  if (e.key === 'crcc_indicators_override') loadData();
+});
+
+document.addEventListener('langchange', () => {
+  if (indicatorsData) renderAll();
+});
+</script>
+</body>
+</html>

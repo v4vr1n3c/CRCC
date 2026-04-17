@@ -1,0 +1,7 @@
+services:
+  cyber-risk-command-center:
+    build: .
+    container_name: cyber-risk-command-center
+    ports:
+      - "8080:80"
+    restart: unless-stopped
