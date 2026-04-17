@@ -1,7 +1,29 @@
 services:
+
+  # ── Frontend (nginx:alpine) ──────────────────────────────────────────────────
   cyber-risk-command-center:
     build: .
     container_name: cyber-risk-command-center
     ports:
       - "8080:80"
+    depends_on:
+      - crcc-backend
     restart: unless-stopped
+
+  # ── Backend (Node.js / Express / SQLite) ────────────────────────────────────
+  crcc-backend:
+    build:
+      context: ./backend
+    container_name: crcc-backend
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-crcc-change-me-in-production}
+      - NODE_ENV=production
+      - DATA_DIR=/data
+    volumes:
+      - ./app/data:/data:ro       # seed JSON files (read-only)
+      - crcc_db:/app/db           # persistent SQLite database
+    restart: unless-stopped
+
+volumes:
+  crcc_db:
+    driver: local

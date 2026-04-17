@@ -60,13 +60,16 @@ O **CRCC** é um dashboard executivo de cibersegurança que centraliza **150 ind
 
 | Camada | Tecnologia |
 |---|---|
-| **Servidor** | nginx:alpine |
+| **Servidor Web** | nginx:alpine |
+| **Backend** | Node.js 20 + Express 4 |
+| **Banco de Dados** | SQLite (better-sqlite3) — arquivo persistido em volume Docker |
+| **Autenticação** | JWT (jsonwebtoken) — bcrypt (12 rounds) |
+| **Rate Limiting** | express-rate-limit — 5 tentativas / 15 min |
 | **Frontend** | HTML5 + Vanilla JavaScript ES6+ + CSS3 |
 | **Gráficos** | [Chart.js 4.4.1](https://www.chartjs.org/) (via CDN) |
-| **Criptografia** | Web Crypto API — PBKDF2 SHA-256, 100.000 iterações |
-| **Armazenamento** | `localStorage` (usuários, overrides, idioma) + `sessionStorage` (tokens) |
+| **Armazenamento** | `localStorage` (JWT, idioma) |
 | **i18n** | Sistema próprio com `data-i18n` attributes (PT / EN / ES) |
-| **Container** | Docker + docker-compose |
+| **Container** | Docker + docker-compose (multi-service) |
 
 ---
 
@@ -125,18 +128,30 @@ A conta admin é criada automaticamente no primeiro acesso via `seedDefaultAdmin
 ```
 CRCC/
 ├── Dockerfile                    # nginx:alpine — copia app/ para webroot
-├── docker-compose.yml            # Porta 8080:80, restart: unless-stopped
-├── nginx.conf                    # Security headers + estratégia de cache
-└── app/
+├── docker-compose.yml            # Serviços: frontend (8080:80) + backend
+├── nginx.conf                    # Security headers + proxy /api/ + cache
+├── .env.example                  # Variáveis de ambiente (copie para .env)
+├── .gitignore
+├── backend/                      # 🖥️  API Node.js/Express
+│   ├── Dockerfile                # Multi-stage: node:20-alpine
+│   ├── package.json
+│   ├── server.js                 # Entry point — Express app
+│   ├── db.js                     # SQLite (better-sqlite3) — schema + seed
+│   ├── middleware/
+│   │   └── auth.js               # verifyToken, requireAdmin
+│   └── routes/
+│       ├── auth.js               # POST /register, /login, GET /me
+│       └── data.js               # GET/PUT/DELETE /indicators, GET /history
+└── app/                          # 🌐 Frontend estático
     ├── index.html                # 📊 Dashboard (requer autenticação)
     ├── charts.html               # 📈 Analytics — 7 gráficos (requer autenticação)
     ├── docs.html                 # 📚 Documentação técnica (requer autenticação)
     ├── admin.html                # ⚙️  Painel Admin (requer autenticação)
     ├── login.html                # 🔐 Página de login
     ├── register.html             # 📝 Cadastro de usuários
-    ├── shared.js                 # 🔧 Auth, crypto, i18n, utilitários (553 linhas)
+    ├── shared.js                 # 🔧 Auth JWT, apiRequest, i18n, utilitários
     └── data/
-        ├── indicators.json       # 150 definições de KPI/KRI em 14 domínios (107 KB)
+        ├── indicators.json       # 150 definições de KPI/KRI em 14 domínios (seed)
         └── history.json          # Scores históricos + predições (31 meses)
 ```
 
@@ -265,26 +280,41 @@ target = 0 (contagens de incidentes):
 
 ## 🔐 Arquitetura de Autenticação
 
-> **Client-side only** — sem backend, sem servidor de autenticação.
+> **Backend com JWT** — credenciais verificadas pelo servidor, token armazenado no cliente.
 
 ```
-Registro → PBKDF2(senha + salt aleatório, 100k iterações) → {name, email, salt, hash} → localStorage
-Login    → PBKDF2(entrada + salt do usuário) → comparação de hash → token 32 bytes → sessionStorage
-Sessão   → sessionStorage.crcc_token (apagado ao fechar a aba)
-Auth     → requireAuth() checa sessionStorage antes de renderizar qualquer página protegida
+Registro → POST /api/auth/register → bcrypt(senha, 12 rounds) → SQLite users
+Login    → POST /api/auth/login    → bcrypt.compare → jwt.sign(8h) → localStorage
+Sessão   → localStorage.crcc_jwt  (JWT decodificado no browser para UX apenas)
+Auth     → requireAuth() verifica JWT expiry antes de renderizar páginas protegidas
+API      → Authorization: Bearer <token> em todas as requisições autenticadas
 ```
 
 **Armazenamento:**
 
 | Chave | Onde | O que guarda |
 |---|---|---|
-| `crcc_users` | `localStorage` | Array de usuários `{name, email, salt, hash, role}` |
-| `crcc_token` | `sessionStorage` | Token de sessão (64 chars base64) |
-| `crcc_user` | `sessionStorage` | Nome do usuário logado |
+| `crcc_jwt` | `localStorage` | JWT Bearer token (expira em 8h) |
 | `crcc_lang` | `localStorage` | Idioma preferido (`pt`/`en`/`es`) |
-| `crcc_indicators_override` | `localStorage` | Override do JSON de indicadores (opcional) |
+| `crcc_data_updated` | `localStorage` | Timestamp de atualização (sync cross-tab) |
+| `users` | SQLite | `{id, name, email, password_hash, role, created_at}` |
+| `indicators_override` | SQLite | JSON de indicadores customizados (opcional) |
 
-> ⚠️ **Nota de produção**: Para uso enterprise multi-usuário, substitua o auth client-side por uma API backend + JWT. O localStorage é legível por qualquer JS na página.
+**Endpoints da API:**
+
+| Método | Endpoint | Auth | Descrição |
+|---|---|:---:|---|
+| `POST` | `/api/auth/register` | ❌ | Criar conta |
+| `POST` | `/api/auth/login` | ❌ | Login — retorna JWT |
+| `GET` | `/api/auth/me` | ✅ | Dados do usuário autenticado |
+| `GET` | `/api/indicators` | ✅ | Indicadores (override ou seed) |
+| `PUT` | `/api/indicators` | 👑 | Salvar override (admin) |
+| `DELETE` | `/api/indicators/override` | 👑 | Restaurar padrões (admin) |
+| `GET` | `/api/history` | ✅ | Dados históricos |
+| `GET` | `/api/users` | 👑 | Listar usuários (admin) |
+| `GET` | `/api/health` | ❌ | Health check |
+
+> ⚠️ **Nota de segurança**: O JWT não é revogado no logout (stateless). Para ambientes enterprise, implemente uma denylist de tokens ou use refresh tokens de curta duração.
 
 ---
 
@@ -336,39 +366,47 @@ fr: {
 
 ## 🐳 Docker — Detalhes
 
-```yaml
-# docker-compose.yml
-services:
-  cyber-risk-command-center:
-    build: .
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-```
+Dois containers orquestrados pelo docker-compose:
 
-```dockerfile
-# Dockerfile
-FROM nginx:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY app/ /usr/share/nginx/html/
-EXPOSE 80
 ```
-
-**Comandos úteis:**
+http://localhost:8080
+        │
+   [nginx:alpine]           ← frontend estático + proxy
+        │
+        ├── /            → app/ (HTML/JS/CSS)
+        └── /api/*       → proxy → crcc-backend:3000
+                                        │
+                                [node:20-alpine]        ← Express API
+                                        │
+                                  SQLite (volume crcc_db)
+```
 
 ```bash
-# Iniciar
+# Copie e configure o .env (obrigatório em produção)
+cp .env.example .env
+# Edite .env e mude JWT_SECRET para um valor seguro
+
+# Iniciar (build + start em background)
 docker-compose up --build -d
+
+# Ver logs em tempo real
+docker-compose logs -f
 
 # Parar
 docker-compose down
 
-# Ver logs
-docker-compose logs -f
-
-# Rebuildar após mudanças
-docker-compose up --build
+# Destruir dados do banco (CUIDADO!)
+docker-compose down -v
 ```
+
+**Variáveis de ambiente do backend:**
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `JWT_SECRET` | `crcc-change-me-in-production` | Segredo de assinatura JWT |
+| `NODE_ENV` | `production` | Ambiente Node.js |
+| `DATA_DIR` | `/data` | Diretório dos arquivos JSON de seed |
+| `PORT` | `3000` | Porta do servidor Express |
 
 ---
 
