@@ -285,12 +285,13 @@
 
         if (res.status === 409) { showError('register_error_exists');    return; }
         if (res.status === 400) { showError('register_error_weak');      return; }
-        if (!res.ok)            { showError('login_error');              return; }
+        if (res.status === 429) { showError('register_error_too_many'); return; }
+        if (!res.ok)            { showError('error_server');             return; }
 
         showSuccess('register_success');
         setTimeout(() => location.replace('login.html'), 1500);
       } catch (err) {
-        showError('login_error');
+        showError('error_server');
       } finally {
         if (btn.disabled) {
           btn.disabled = false;

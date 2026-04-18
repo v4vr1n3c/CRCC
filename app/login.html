@@ -279,7 +279,7 @@
         location.replace(getSafeNext());
 
       } catch (err) {
-        showError('login_error');
+        showError('error_server');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span data-i18n="login_btn">' + t('login_btn') + '</span>';
