@@ -1,0 +1,4 @@
+[server] ⚠️  WARNING: JWT_SECRET is using the default value. Change it before deploying to production!
+(node:71554) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[server] CRCC backend listening on port 3000

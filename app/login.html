@@ -270,10 +270,11 @@
         const data = await res.json();
 
         if (res.status === 429) { showError('login_locked'); return; }
-        if (!res.ok)            { showError('login_error');  return; }
+        if (res.status === 401) { showError('login_error');  return; }
+        if (!res.ok)            { showError('error_server'); return; }
 
         if (!data.token || typeof data.token !== 'string') {
-          showError('login_error'); return;
+          showError('error_server'); return;
         }
         localStorage.setItem('crcc_jwt', data.token);
         location.replace(getSafeNext());
